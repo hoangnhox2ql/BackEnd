@@ -2,9 +2,24 @@ const express = require('express');
 const jsonwebtoken = require('jsonwebtoken');
 const crypto = require('crypto');
 const { request } = require('http');
+const mysql = require('mysql2');
+
 
 const app = express();
 const key = crypto.generateKeyPairSync('rsa',{modulusLength : 2048});
+
+const connection = mysql.createConnection({
+    host: '127.0.0.1',
+    user: 'root',
+    password: 'root',
+    database: 'data1',
+    multipleStatements : false
+});
+connection.connect(function(err) {
+    if (err) throw err;
+    console.log("Connected!!!")
+  });
+
 
 const publicKey = key.publicKey;
 const privateKey = key.privateKey;
@@ -106,5 +121,63 @@ app.get('/balance', (req, res, next) => {
         });
     }
 });
-
+router.post('/login', async function(req, res) {
+    const {
+        username,
+        password,
+    } = req.body;
+    const isUserExisted = await getOne({
+        db,
+        query: 'SELECT * FROM users WHERE username = ?',
+        params: username,
+    });
+});
 app.listen(3000, () => console.log('Server is listening on PORT 3000'));
+router.post('/register',async function(req,res){
+    const {
+        username,
+        password,
+        gneder,
+        name,   
+        age,
+        email,
+    } = req.body;
+    
+});
+const isUserExisted = await getOne({
+    db,
+    query: 'SELECT * FROM users WHERE username =?',
+    params : username,
+});
+if(isUserExisted)
+{
+    return res.status(400).json({
+        message : 'User already exist',
+    });
+}
+const {
+    hashPassword,
+    salt,
+} = hashPassword(password);
+const isUserCreated = await create({
+    query : 'INSERT INTO users(username,password,salt,name,email,age,gender) VALUE (?,?,?,?,?,?,?)',
+    params : {
+        username,
+        hashPassword,
+        salt,
+        name, 
+        email,
+        age,
+        gender,
+    },
+});
+if(isUserCreated)
+{
+    return res.status(200).json({
+        message : 'Register succesfully',
+    });
+}
+return res.status(500).json({
+    message : 'Internal server error',
+});
+

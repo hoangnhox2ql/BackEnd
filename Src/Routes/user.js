@@ -1,58 +1,98 @@
 import { Router } from 'express'
-import { validateRequest } from '../middleware/validateRequest.js'
-import { db } from '../database/connection.js'
-
 const user_router = Router()
+// import { validateRequest } from '../middleware/validateRequest.js'
+import { db } from '../database/connection.js'
+import { hashPassword, verifyToken } from '../helpers/hash.js'
+
 export { user_router }
 
-// lấy tất cả thông tin user
-app.get('/users', (req, res) => {
-    const query = 'SELECT * FROM users';
-    connection.query(query, (error, result) => {
-        console.error(error);
-        res.send(result);
-    });
-});
-// lấy thông tin user theo id
-app.get('/users/:id',(req,res) =>{
-    const query = 'SELECT ?,name,gneder,age FROM users';
-    const {id} = req.params;
-    connection.query(query,[id],(error,result) => {
-        console.log(error);
-        res.send(result);
-    })
+user_router.put('/:id', (req, res) => {
+    if (!req.headers.authorization) {
+        return res.status(401).json({
+            message: 'You are not authorized'
+        })
+    }
+    const token = req.headers.authorization.split(' ')[1]
+
+    try {
+        var decoded = verifyToken(token)
+    } catch (err) {
+        return res.status(401).json({
+            error: err
+        })
+    }
+
+    if (decoded.id === parseInt(req.params.id)) {
+        const {
+            hashedPassword,
+            salt,
+        } = hashPassword(req.body.password)
+
+        req.body.password = hashedPassword
+        req.body.salt = salt
+
+        db.query('UPDATE users SET ? WHERE id = ?', [req.body, req.params.id], (err, rows) => {
+            if (err) {
+                console.log(err)
+            } else {
+                res.status(200).json(rows)
+            }
+        })
+    } else {
+        res.status(403).json({
+            message: 'You are not allowed to update this user'
+        })
+    }
 })
 
-// thêm mới một user
-app.post('/users', (req, res) => {
-    const { name, gneder,age } = req.body;
-    const query = 'INSERT INTO users (name, gneder,age) VALUES (?, ?, ?)';
-    connection.query(query, [name, gneder,age], (error, result) => {
-        console.log(error)
-        res.send('User added successfully!');
-    });
+user_router.delete('/:id', (req, res) => {
+    if (!req.headers.authorization) {
+        return res.status(401).json({
+            message: 'You are not authorized'
+        })
+    }
+    const token = req.headers.authorization.split(' ')[1]
+
+    try {
+        var decoded = verifyToken(token)
+    } catch (err) {
+        return res.status(401).json({
+            error: err
+        })
+    }
+
+    if (decoded.id === parseInt(req.params.id)) {
+        db.query('DELETE FROM users WHERE id = ?', [req.params.id], (err, rows) => {
+            if (err) {
+                console.log(err)
+            } else {
+                res.status(200).json(rows)
+            }
+        })
+    } else {
+        res.status(403).json({
+            message: 'You are not allowed to delete this user'
+        })
+    }
+})
+
+user_router.post('/test', async function (req, res) {
+    try {
+        const { emailFrom, emailTo, emailSubject, emailText } = req.body;
+        await mailService.sendEmail({
+            emailFrom: emailFrom,
+            emailTo: emailTo,
+            emailSubject: emailSubject,
+            emailText: emailText,
+        });
+
+        return res.status(200).json({
+            message: 'reset password email sent successfully',
+        });
+    } catch (error) {
+        return res.status(500).json({
+            message: 'error',
+        });
+    }
 });
 
-// cập nhật thông tin user theo id
-app.put('/users/:id', (req, res) => {
-    const { id } = req.params;
-    const { name, gneder,age } = req.body;
-    const query = 'UPDATE users SET name = ?, gneder = ?, age = ? WHERE id = ?';
-    connection.query(query, [name, gneder, age, id], (error, result) => {
-        console.log(error);
-        res.send('User updated successfully!');
-    });
-});
-
-// xóa một user theo id
-app.delete('/users/:id', (req, res) => {
-    const { id } = req.params;
-    const query = 'DELETE FROM users WHERE id = ?';
-    connection.query(query, [id], (error, result) => {
-        console.log(error)
-        res.send('User deleted successfully!');
-    });
-});
-app.listen(3000, () => {
-    console.log('Server started on port 3000');
-});

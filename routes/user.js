@@ -5,8 +5,8 @@ const app = express();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 let users = [
-    { id: 1, fullname: 'Bui Duy Hoang', gender:true,age : 20 },
-    { id: 2, fullname: 'Bui Duy Hoang', gender:true,age : 20 }
+    { id: 1, fullname: 'Le Phan Hoang Phuc', gender: true, age: 20 },
+    { id: 2, fullname: 'Le Thi Phuc', gender: true, age: 20 }
 ];
 // lấy tất cả thông tin user
 app.get('/users', (req, res) => {
@@ -46,7 +46,7 @@ app.put('/users/:id', (req, res) => {
 });
 
 // xóa một user theo id
-app.delete('/users/:id',(req, res) => {
+app.delete('/users/:id', (req, res) => {
     const id = parseInt(req.params.id);
     const index = users.findIndex(u => u.id === id);
     if (index !== -1) {
@@ -55,7 +55,7 @@ app.delete('/users/:id',(req, res) => {
         res.json(deletedUser);
     } else {
         res.status(404).send('User not found');
-}
+    }
 });
 
 app.listen(3000, () => {
